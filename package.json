@@ -1,0 +1,16 @@
+{
+  "name": "page-agent-hermes",
+  "version": "1.0.0",
+  "description": "Playwright-based MCP server for Hermes Agent — headless browser automation via OpenAI-compatible LLMs (mimo-v2.5 tested)",
+  "main": "mcp-playwright.js",
+  "scripts": {
+    "start": "node mcp-playwright.js",
+    "test": "echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}' | timeout 15 node mcp-playwright.js 2>&1"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

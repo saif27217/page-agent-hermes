@@ -1,0 +1,11 @@
+node_modules
+*.log
+.env
+__pycache__
+.pytest_cache
+*.pyc
+.DS_Store
+.venv
+.idea
+.vscode
+*.pid
