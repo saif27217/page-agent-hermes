@@ -30,12 +30,26 @@ async function ensureBrowser() {
   if (browser && context && page && !page.isClosed()) return;
   browser = await chromium.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    args: [
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-infobars",
+      "--no-first-run",
+      "--no-default-browser-check",
+    ],
   });
   context = await browser.newContext({
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     viewport: { width: 1280, height: 900 },
+    locale: "en-US",
+  });
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+    window.chrome = { runtime: {} };
+    Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
+    Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
   });
   page = await context.newPage();
 }
@@ -46,6 +60,16 @@ async function closeBrowser() {
     if (context) { await context.close(); context = null; }
     if (browser) { await browser.close(); browser = null; }
   } catch {}
+}
+
+async function safeGoto(url) {
+  await ensureBrowser();
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  } catch (e) {
+    return { error: `Navigation failed: ${e.message}` };
+  }
+  return { ok: true };
 }
 
 // ─── Stable selector injection ────────────────────────────────────────────
