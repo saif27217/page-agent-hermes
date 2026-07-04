@@ -1,6 +1,6 @@
 {
   "name": "page-agent-hermes",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Playwright-based MCP server for Hermes Agent — headless browser automation via OpenAI-compatible LLMs (mimo-v2.5 tested)",
   "main": "mcp-playwright.js",
   "scripts": {

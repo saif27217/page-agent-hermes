@@ -130,7 +130,11 @@ async function observe() {
   const pageInfo = await page.evaluate(() => ({
     title: document.title || "",
     url: document.location.href || "",
-    text: (document.body?.innerText || "").slice(0, 4000),
+    text: (document.body?.innerText || "").slice(0, 12000),
+    cf: document.body?.innerText?.toLowerCase().includes("cloudflare") ||
+        document.querySelector("[id*='cf-chl-widget']") !== null ||
+        document.querySelector("[class*='challenge']") !== null ||
+        document.querySelector("title")?.textContent?.toLowerCase().includes("cloudflare") || false,
   }));
   return { pageInfo, map };
 }
@@ -228,14 +232,31 @@ const AGENT_TOOLS = [
 ];
 
 const AGENT_SYSTEM_PROMPT = `You are a web browsing agent. Complete the user's task by taking ONE tool call per step.
-Rules:
-- Build a mental model of the page from the observation text.
-- Call 'done' when the task is fully complete. Do NOT call it if the task failed.
-- If you cannot complete the task after exploring, call done with explanation.
-- Prefer 'scroll down' before clicking if the element you need is not visible.
-- For forms: focus the field first, then type, then move to the next field.
-- Observe: title, URL, body text, and indexed interactive elements are provided each step.
-- Maximize 1 action per step. Be concise in reasoning.`;
+
+CRITICAL: If the URL contains a #anchor like #section_name or #Medical_uses, the content the user wants is ALREADY on screen. Do NOT scroll. Read the provided body text and put the actual answer in 'done'. 
+
+If after 1-2 scroll steps everything needed is visible, call 'done' with full extracted content rather than continuing to scroll.
+
+When calling 'done':
+ - PUT THE ACTUAL ANSWER in summary — quote exact numbers/phrases from the page text, e.g. "CrCl 20-49: 500 mg every other day"
+ - Do NOT say "I found the information" — write the actual data
+ - Do NOT say "the page is accessible" — write what the page says
+
+Observation format (JSON):
+ - pageInfo.text — first 12 KB of innerText (enough for full table data)
+ - pageInfo.cf — true if Cloudflare challenge detected (if true, call done with the Cloudflare message)
+ - elements — up to 40 indexed interactive elements (links, buttons, inputs)
+
+Tool rules:
+ - click index=N — clicks element data-pa-idx=N from the selector map
+ - type index=N text="..." — fills element N
+ - scroll down/up
+ - done summary="..." — only when task fully answered
+
+Heuristics:
+ - 1 scroll reveals ~1 viewport; 3-4 scrolls traverse the full page
+ - After finding the target section, call done — do NOT keep exploring
+ - The text provided in pageInfo.text is usually the whole page body — search it directly before scrolling`;
 
 async function agentExecuteTask({ instruction, url }) {
   await ensureBrowser();
@@ -260,10 +281,24 @@ async function agentExecuteTask({ instruction, url }) {
       break;
     }
 
+    if (obs.pageInfo.cf) {
+      return {
+        steps: step,
+        summary: `BLOCKED: Cloudflare challenge detected on ${obs.pageInfo.url}. Task cannot proceed via headless Playwright. Use Hermes native browser tools (browser_navigate + browser_snapshot) to complete this task manually — they go through Browserbase which bypasses Cloudflare. Raw page title: "${obs.pageInfo.title}"`,
+        error: "Cloudflare blocked headless chromium",
+        finalUrl: obs.pageInfo.url,
+        finalTitle: obs.pageInfo.title,
+        cloudflare_blocked: true,
+      };
+      console.error("[page-agent-hermes] CF_BLOCK", JSON.stringify(result).slice(0, 200));
+      return result;
+    }
+
     const obsText = JSON.stringify({
       title: obs.pageInfo.title,
       url: obs.pageInfo.url,
-      text: obs.pageInfo.text.slice(0, 2000),
+      text: obs.pageInfo.text.slice(0, 10000),
+      cloudflare_blocked: !!obs.pageInfo.cf,
       elements: obs.map.slice(0, ELEM_LIMIT),
     });
 
@@ -355,15 +390,17 @@ async function agentExecuteTask({ instruction, url }) {
 
   const finalPage = await page.evaluate(() => ({ title: document.title, url: document.location?.href || "" })).catch(() => ({}));
 
-  return {
+  const result = {
     steps: step,
     summary: doneSummary || error || "No conclusion (max steps reached)",
     error: error || "",
     finalUrl: finalPage.url || "",
     finalTitle: finalPage.title || "",
   };
+  return result;
 }
 
+// ─── Manual tools (unchanged from previous version) ──────────────────────
 // ─── Manual tools (unchanged from previous version) ──────────────────────
 const MANUAL_TOOLS = {
   browser_navigate: {
