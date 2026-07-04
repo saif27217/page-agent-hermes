@@ -111,6 +111,7 @@ README.md           — this file
 - Chromium must be installed: `npx playwright install chromium`
 - `agent_execute` is limited to ELEM_LIMIT (40) visible interactive elements per step
 - Text-only observation; no vision model
+- Cloudflare-protected sites redirect to Hermes native browser tools automatically
 
 ## License
 
