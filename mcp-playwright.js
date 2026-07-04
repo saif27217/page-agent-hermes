@@ -16,10 +16,25 @@ let browser = null;
 let context = null;
 let page = null;
 
+function readEnvFile(path) {
+  try {
+    const fs = require("fs");
+    const data = fs.readFileSync(path, "utf8");
+    const env = {};
+    for (const line of data.split("\n")) {
+      const m = line.match(/^\s*(\w+)\s*=\s*(.*?)\s*$/);
+      if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    }
+    return env;
+  } catch { return {}; }
+}
+
+const hermesEnv = readEnvFile(require("path").join(process.env.HOME || "/home/sak", ".hermes", ".env"));
+
 const CONFIG = {
-  model: process.env.OPENROUTER_MODEL || "mimo-v2.5",
-  apiKey: process.env.OPENROUTER_API_KEY || "",
-  apiBase: (process.env.OPENROUTER_API_BASE || "https://openrouter.ai/api/v1").replace(/\/+$/, ""),
+  model: process.env.OPENROUTER_MODEL || hermesEnv.OPENROUTER_MODEL || "mimo-v2.5",
+  apiKey: process.env.OPENROUTER_API_KEY || hermesEnv.OPENROUTER_API_KEY || "",
+  apiBase: (process.env.OPENROUTER_API_BASE || hermesEnv.OPENROUTER_API_BASE || "https://openrouter.ai/api/v1").replace(/\/+$/, ""),
 };
 
 const MAX_STEPS = 14;
@@ -99,6 +114,10 @@ async function buildSelectorMap() {
       const nodes = document.querySelectorAll(sel);
       for (const el of nodes) {
         if (idx >= limit) break;
+        // Skip invisible elements
+        if (el.offsetParent === null && !(el.tagName === "SUMMARY" || el.tagName === "DETAILS")) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
         const key = (el.tagName + "|" + (el.href || el.textContent?.trim()?.slice(0, 30) || el.placeholder || el.ariaLabel || el.innerHTML?.slice(0, 20) || "")).slice(0, 120);
         if (seen.has(key)) continue;
         seen.add(key);
@@ -150,14 +169,19 @@ async function callLLM(messages, tools) {
     parallel_tool_calls: false,
   };
 
-  const resp = await fetch(`${CONFIG.apiBase}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${CONFIG.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    var resp = await fetch(`${CONFIG.apiBase}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${CONFIG.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally { clearTimeout(timeout); }
 
   if (!resp.ok) {
     const err = await resp.text();
@@ -270,6 +294,8 @@ async function agentExecuteTask({ instruction, url }) {
   let step = 0;
   let doneSummary = "";
   let error = "";
+  let sameActionFails = 0;
+  let lastActionKey = "";
 
   while (step < MAX_STEPS) {
     // ── Observe ──────────────────────────────────────────────────────
@@ -339,6 +365,17 @@ async function agentExecuteTask({ instruction, url }) {
     // ── Act ────────────────────────────────────────────────────────
     if (call.function.name === "done") {
       doneSummary = args.summary || "Task complete";
+      break;
+    }
+
+    // Track repeated actions for stuck detection
+    const actionKey = `${call.function.name}:${JSON.stringify(args)}`;
+    if (actionKey === lastActionKey) { sameActionFails++; } else { sameActionFails = 0; lastActionKey = actionKey; }
+
+    if (sameActionFails >= 3) {
+      // Stuck — force read from page text and done
+      const stuckText = await page.evaluate(() => (document.body?.innerText || "").slice(0, 8000));
+      doneSummary = `(ReAct stuck on same action after 3 attempts) Page text at ${page.url()}:\n${stuckText.slice(0, 3000)}`;
       break;
     }
 
@@ -525,6 +562,7 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 
 async function handleMessage(msg) {
   const id = msg.id;
+  const isNotification = id === undefined || id === null;
 
   if (msg.method === "initialize") {
     return send({ id, result: {
@@ -533,6 +571,9 @@ async function handleMessage(msg) {
       serverInfo: { name: "page-agent-hermes", version: "1.1.0" },
     }});
   }
+
+  // Notifications — no response expected
+  if (isNotification) return;
 
   if (msg.method === "tools/list") {
     return send({ id, result: {
@@ -555,20 +596,19 @@ async function handleMessage(msg) {
     }
   }
 
-  if (msg.method === "initialized") {
-    return send({ id, result: {} });
-  }
-
   return sendError(id, -32601, `Unknown method: ${msg.method}`);
 }
 
-function send(msg) { process.stdout.write(JSON.stringify(msg) + "\n"); }
+function send(msg) { process.stdout.write(JSON.stringify({ ...msg, jsonrpc: "2.0" }) + "\n"); }
 function sendError(id, code, message) { send({ id, error: { code, message } }); }
 
 rl.on("line", (line) => {
   if (!line.trim()) return;
   try {
-    handleMessage(JSON.parse(line)).catch((e) => sendError(null, -32603, e.message));
+    const msg = JSON.parse(line);
+    handleMessage(msg).catch((e) => {
+      if (msg.id != null) sendError(msg.id, -32603, e.message);
+    });
   } catch {}
 });
 
