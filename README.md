@@ -88,7 +88,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 | Reflection | ✓ (history rollup) | ✓ (step-by-step history to LLM) |
 | Stable selectors | `data-index` on elems | `data-pa-idx` injected same way |
 | DOM extraction | flatTree + selectorMap | selector map + first 4KB innerText |
-| Skills system | ✓ `.agents/skills` | ✓ `skills/` — 9 tested templates |
+| Skills system | ✓ `.agents/skills` (runtime-loadable) | ✓ `skills/` (instruction templates) |
 | Multi-tab | ✓ Chrome extension | ✗ single tab |
 | Vision | ✓ multimodal screenshot | ✗ text-only |
 | Drag/drop | ✓ | ✗ stub out for now |

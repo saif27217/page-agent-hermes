@@ -3,6 +3,10 @@
 > Tested instruction templates for `agent_execute` (ReAct loop) targeting
 > real-world clinical/biochemistry websites.
 
+**⚠️ Not Hermes skills.** These are markdown docs with prompt templates
+for the `agent_execute` MCP tool — not `.hermes/skills/`-loadable skills.
+Copy the instruction text into an `agent_execute` call, not `skill_view`.
+
 ## How to Use
 
 Load a skill into `agent_execute` by passing its `instruction` as a
