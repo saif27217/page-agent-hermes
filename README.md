@@ -88,7 +88,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 | Reflection | ✓ (history rollup) | ✓ (step-by-step history to LLM) |
 | Stable selectors | `data-index` on elems | `data-pa-idx` injected same way |
 | DOM extraction | flatTree + selectorMap | selector map + first 4KB innerText |
-| Skills system | ✓ `.agents/skills` | ✗ stub out for now |
+| Skills system | ✓ `.agents/skills` | ✓ `skills/` — 9 tested templates |
 | Multi-tab | ✓ Chrome extension | ✗ single tab |
 | Vision | ✓ multimodal screenshot | ✗ text-only |
 | Drag/drop | ✓ | ✗ stub out for now |
@@ -101,6 +101,17 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 mcp-playwright.js   — single-file MCP server; contains both manual tools and agent_execute
 package.json        — playwright dep + start/test scripts
 README.md           — this file
+skills/             — 9 tested `agent_execute` instruction templates
+  README.md            — index and how-to
+  dailymed.md          — FDA drug labeling
+  clinicaltrials.md    — clinical trial registry
+  reactome.md          — pathway browser
+  rcsb-pdb.md          — protein structures
+  nice-guidelines.md   — UK clinical guidelines
+  opentargets.md       — drug-target validation
+  google-scholar.md    — academic search
+  uniprot.md           — protein database
+  clinpgx.md           — pharmacogenomics
 ```
 
 ## Limitations
