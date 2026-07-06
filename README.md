@@ -88,7 +88,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 | Reflection | ✓ (history rollup) | ✓ (step-by-step history to LLM) |
 | Stable selectors | `data-index` on elems | `data-pa-idx` injected same way |
 | DOM extraction | flatTree + selectorMap | selector map + first 4KB innerText |
-| Skills system | ✓ `.agents/skills` (runtime-loadable) | ✓ `skills/` (instruction templates) |
+| Skills system | ✓ `.agents/skills` (runtime-loadable) | ✓ `skills/` (9 instruction templates + 1 API pipeline) |
 | Multi-tab | ✓ Chrome extension | ✗ single tab |
 | Vision | ✓ multimodal screenshot | ✗ text-only |
 | Drag/drop | ✓ | ✗ stub out for now |
@@ -101,7 +101,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 mcp-playwright.js   — single-file MCP server; contains both manual tools and agent_execute
 package.json        — playwright dep + start/test scripts
 README.md           — this file
-skills/             — 9 tested `agent_execute` instruction templates
+skills/             — 9 `agent_execute` instruction templates + 1 API pipeline
   README.md            — index and how-to
   dailymed.md          — FDA drug labeling
   clinicaltrials.md    — clinical trial registry
@@ -112,6 +112,7 @@ skills/             — 9 tested `agent_execute` instruction templates
   google-scholar.md    — academic search
   uniprot.md           — protein database
   clinpgx.md           — pharmacogenomics
+  multi-source-research.md — 7-API pipeline (terminal, not browser)
 ```
 
 ## Limitations

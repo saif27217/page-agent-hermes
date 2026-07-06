@@ -7,6 +7,9 @@
 for the `agent_execute` MCP tool — not `.hermes/skills/`-loadable skills.
 Copy the instruction text into an `agent_execute` call, not `skill_view`.
 
+**One exception:** [multi-source-research.md](./multi-source-research.md) is a
+**terminal/API pipeline** (curl + Google Docs), not an `agent_execute` template.
+
 ## How to Use
 
 Load a skill into `agent_execute` by passing its `instruction` as a
@@ -34,6 +37,7 @@ natural-language prompt, optionally with a `url` to start from.
 | [Google Scholar](./google-scholar.md) | Academic search | No | Partial | ✅ |
 | [UniProt](./uniprot.md) | Protein database | No | No | ✅ |
 | [ClinPGx](./clinpgx.md) | Pharmacogenomics | No | No | ✅ |
+| [Multi-Source Research](./multi-source-research.md) | **7-API pipeline** (curl) | No | No | ✅ |
 
 ## Test Results (July 2026)
 
