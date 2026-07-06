@@ -38,6 +38,7 @@ natural-language prompt, optionally with a `url` to start from.
 | [UniProt](./uniprot.md) | Protein database | No | No | ✅ |
 | [ClinPGx](./clinpgx.md) | Pharmacogenomics | No | No | ✅ |
 | [Multi-Source Research](./multi-source-research.md) | **7-API pipeline** (curl) | No | No | ✅ |
+| [Biochem Multi-Source Research](./biochem-multi-source-research.md) | **Deep-dive pipeline** (RAG + web + APIs) | No | No | ✅ |
 
 ## Test Results (July 2026)
 
